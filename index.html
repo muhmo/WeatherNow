@@ -116,6 +116,17 @@
       			document.getElementById("humidity").textContent = `Humidity: (data not available in daily API)`;
       			document.getElementById("windSpeed").textContent = `Wind: ${weatherData.current_weather.windspeed} km/h`;
 
+				const now = new Date();
+				const options = { 
+  					timeZone: weatherData.timezone, 
+  					hour: '2-digit', 
+  					minute: '2-digit', 
+  					second: '2-digit' 
+				};
+				const localTime = now.toLocaleTimeString('en-US', options);
+
+				document.getElementById("time").textContent = `Local Time: ${localTime}`;
+
       			const forecastDiv = document.getElementById("forecast");
       			forecastDiv.innerHTML = "";
       			weatherData.daily.time.forEach((day, i) => {
