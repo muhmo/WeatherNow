@@ -94,7 +94,7 @@
 
 		async function fetchWeather(city) {
 			try {
-				const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=${city}');
+				const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
 				const geoData = await geoRes.json();
 
 				if (!geoData.results || geoData.results.length === 0) {
@@ -104,9 +104,9 @@
 
 				const { latitude, longitude, name, country } = geoData.results[0];
 
-				const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto');
+				const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`);
 
-				if (!weatherRes.ok) throw new Error('HTTP Error: ${weatherRes.status}');
+				if (!weatherRes.ok) throw new Error(`HTTP Error: ${weatherRes.status}`);
 
 				const weatherData = await weatherRes.json();
 
