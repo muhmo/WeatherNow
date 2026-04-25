@@ -64,5 +64,76 @@
 			<p class="skeleton">--°C</p>
 		</div>
 	</div>
+
+	<script>
+		const searchBtn = document.getElementById("searchBtn");
+		const searchInput = document.getElementById("searchInput");
+
+		function lookupWeather(code) {
+			const table = {
+				0: "Clear ☀️"
+				1: "Mainly Clear 🌤️",
+      			2: "Partly Cloudy ⛅",
+      			3: "Overcast ☁️",
+      			45: "Fog 🌫️",
+      			61: "Rain 🌧️",
+      			71: "Snow ❄️",
+
+			};
+			return table[code] || "Unknown";
+		}
+
+		searchBtn.addEventListener("click", () => {
+			const city = searchInput.value.trim();
+			if (city.length < 2) {
+				alert("Please enter at least 2 characters.");
+				return;
+			}
+			fetchWeather(city);
+		});
+
+		async function fetchWeather(city) {
+			try {
+				const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=${city}');
+				const geoData = await geoRes.json();
+
+				if (!geoData.results || geoData.results.length === 0) {
+					document.getElementById("cityName").textContent = "City not found!";
+					return;
+				}
+
+				const { latitude, longitude, name, country } = geoData.results[0];
+
+				const weatherRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto');
+
+				if (!weatherRes.ok) throw new Error('HTTP Error: ${weatherRes.status}');
+
+				const weatherData = await weatherRes.json();
+
+				document.getElementById("cityName").textContent = `${name}, ${country}`;
+      			document.getElementById("temperature").textContent = `Temp: ${weatherData.current_weather.temperature}°C`;
+      			document.getElementById("description").textContent = `Weather: ${lookupWeather(weatherData.current_weather.weathercode)}`;
+      			document.getElementById("humidity").textContent = `Humidity: (data not available in daily API)`;
+      			document.getElementById("windSpeed").textContent = `Wind: ${weatherData.current_weather.windspeed} km/h`;
+
+      			const forecastDiv = document.getElementById("forecast");
+      			forecastDiv.innerHTML = "";
+      			weatherData.daily.time.forEach((day, i) => {
+      				const card = document.createElement("div");
+      				card.className = "forecast-card";
+      				card.innerHTML = `
+          				<h4>${new Date(day).toLocaleDateString("en-US", { weekday: "short" })}</h4>
+          				<p>${lookupWeather(weatherData.daily.weathercode[i])}</p>
+          				<p>${weatherData.daily.temperature_2m_min[i]}°C / ${weatherData.daily.temperature_2m_max[i]}°C</p>
+        			`;
+        			forecastDiv.appendChild(card);
+      			});
+
+			} catch (err) {
+				console.error(err);
+				alert("Network error. Please retry.");
+			}
+		}
+	</script>
 </body>
 </html>
