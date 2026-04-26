@@ -27,6 +27,8 @@
 	<script>
 		const searchBtn = document.getElementById("searchBtn");
 		const searchInput = document.getElementById("searchInput");
+		let debounceTimer;
+		const DEBOUNCE_DELAY = 500;
 
 		function lookupWeather(code) {
 			const table = {
@@ -42,10 +44,22 @@
 			return table[code] || "Unknown";
 		}
 
+		searchInput.addEventListener("input", () => {
+      		clearTimeout(debounceTimer);
+      		debounceTimer = setTimeout(() => {
+        		const city = searchInput.value.trim();
+        		if (city.length >= 2) {
+          			fetchWeather(city);
+        		} else {
+          			document.getElementById("cityName").textContent = "⚠️ Enter at least 2 characters.";
+        		}
+      		}, DEBOUNCE_DELAY);
+    	});
+
 		searchBtn.addEventListener("click", () => {
 			const city = searchInput.value.trim();
 			if (city.length < 2) {
-				alert("Please enter at least 2 characters.");
+				document.getElementById("cityName").textContent = "⚠️ Enter at least 2 characters.";
 				return;
 			}
 			fetchWeather(city);
@@ -53,7 +67,13 @@
 
 		async function fetchWeather(city) {
 			try {
-				const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+				const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`, {signal: controller.signal});
+				clearTimeout(timeoutId);
+
+				if(!geoRes.ok) throw new Error(`HTTP Error: ${geoRes.status}`);
 				const geoData = await geoRes.json();
 
 				if (!geoData.results || geoData.results.length === 0) {
@@ -63,7 +83,8 @@
 
 				const { latitude, longitude, name, country } = geoData.results[0];
 
-				const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`);
+				const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`, 
+					{ signal: controller.signal });
 
 				if (!weatherRes.ok) throw new Error(`HTTP Error: ${weatherRes.status}`);
 
@@ -92,7 +113,7 @@
       			.done(function(timeData) {
       				const localTime = new Date(timeData.datetime).toLocaleTimeString('en-US', {
       					hour: '2-digit',
-      					minitues: '2-digit',
+      					minute: '2-digit',
       					second: '2-digit'
       				});
       				document.getElementById("time").textContent = `Local Time: ${localTime}`;
@@ -101,7 +122,7 @@
       				const now = new Date();
       				const fallbackTime = now.toLocaleTimeString('en-US', {
       					hour: '2-digit',
-      					minitues: '2-digit',
+      					minute: '2-digit',
       					second: '2-digit'
       				});
       				document.getElementById("time").textContent = `Local Time (Browser): ${fallbackTime}`;
@@ -112,7 +133,11 @@
 
 			} catch (err) {
 				console.error(err);
-				alert("Network error. Please retry.");
+				if (err.name === "AbortError") {
+					document.getElementById("cityName").textContent = "Request timed out (10s).";
+				} else {
+					document.getElementById("cityName").textContent = `Error: ${err.message}`;
+				}
 			}
 		}
 	</script>
